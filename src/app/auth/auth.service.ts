@@ -17,16 +17,18 @@ export class AuthService {
     redirectUri: AUTH_CONFIG.REDIRECT,
     audience: AUTH_CONFIG.AUDIENCE,
     scope: AUTH_CONFIG.SCOPE
-  })
+  });
   userProfile: any;
   loggedIn: boolean;
   loggedIn$ = new BehaviorSubject<boolean>(this.loggedIn);
+  isAdmin: boolean;
   constructor(private router: Router) {
 
     const lsProfile = localStorage.getItem('profile');
 
     if (this.tokenValid) {
       this.userProfile = JSON.parse(lsProfile);
+      this.isAdmin = localStorage.getItem('isAdmin') === 'true';
       this.setLoggedIn(true);
     } else if (!this.tokenValid && lsProfile) {
       this.logout();
@@ -70,8 +72,15 @@ export class AuthService {
     localStorage.setItem('expires_at', expiresAt);
     localStorage.setItem('profile', JSON.stringify(profile));
     this.userProfile = profile;
+    localStorage.setItem('isAdmin', this.isAdmin.toString());
     // Update login status in loggedIn$ stream
     this.setLoggedIn(true);
+  }
+
+  private _checkAdmin(profile) {
+    // Check if the user has admin role
+    const roles = profile[AUTH_CONFIG.NAMESPACE] || [];
+    return roles.indexOf('admin') > -1;
   }
 
   logout() {
@@ -83,6 +92,7 @@ export class AuthService {
     localStorage.removeItem('authRedirect');
     // Reset local properties, update loggedIn$ stream
     this.userProfile = undefined;
+    this.isAdmin = undefined;
     this.setLoggedIn(false);
     // Return to homepage
     this.router.navigate(['/']);
